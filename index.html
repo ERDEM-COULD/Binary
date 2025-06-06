@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Çoklu Dil & Çoklu Çevirici</title>
+<style>
+  /* Reset & temel */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  body.light-mode {
+    background: #f5f5f5;
+    color: #333;
+  }
+
+  /* HEADER: dil seçimi sağ üstte */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background: #1f1f1f;
+    box-shadow: 0 2px 6px #0008;
+  }
+
+  .header-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
+
+  #langSelector, #themeToggle {
+    background: #2b2b2b;
+    border: none;
+    color: #eee;
+    font-size: 1rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  #themeToggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  #currentDate {
+    font-size: 0.9rem;
+    color: #aaa;
+  }
+
+  #langSelector:hover, #themeToggle:hover {
+    background: #004f75;
+  }
+
+  /* Ana içerik genişliği & ortalama */
+  main {
+    flex: 1;
+    max-width: 900px;
+    width: 100%;
+    margin: 24px auto;
+    padding: 0 16px 40px;
+  }
+
+  /* Başlık */
+  h1 {
+    color: #00aaff;
+    text-align: center;
+    margin-bottom: 30px;
+    user-select: none;
+    text-shadow: 0 0 8px #00aaffaa;
+  }
+
+  /* Sekme başlıkları */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #004f75;
+    user-select: none;
+  }
+  .tab {
+    padding: 12px 28px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #aaa;
+    font-weight: 600;
+    transition: color 0.25s, border-bottom 0.25s;
+    border-bottom: 4px solid transparent;
+  }
+  .tab:hover {
+    color: #00aaff;
+  }
+  .tab.active {
+    color: #00aaff;
+    border-bottom: 4px solid #00aaff;
+    font-weight: 700;
+  }
+
+  /* İçerik kutuları */
+  .tab-content {
+    background: #222;
+    border-radius: 14px;
+    padding: 20px 25px;
+    box-shadow: 0 5px 25px #000c;
+    font-family: 'Courier New', Courier, monospace;
+    min-height: 180px;
+    color: #00aaff;
+    display: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .light-mode .tab-content {
+    background: #fff;
+    box-shadow: 0 5px 25px #0001;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  /* Input ve output alanları */
+  textarea {
+    width: 100%;
+    height: 130px;
+    background: #121212;
+    border: 2px solid #004f75;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 1.15rem;
+    color: #e0e0e0;
+    resize: vertical;
+    outline-color: #00aaff;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 16px;
+    transition: border-color 0.3s ease, background 0.3s, color 0.3s;
+  }
+
+  .light-mode textarea {
+    background: #fff;
+    color: #333;
+    border-color: #0077b3;
+  }
+
+  textarea:focus {
+    border-color: #00aaff;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  button {
+    flex: 1;
+    padding: 14px 0;
+    font-weight: 700;
+    background: #00aaff;
+    color: #121212;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 15px #000a;
+    transition: background-color 0.3s ease;
+    user-select: none;
+  }
+  button:hover {
+    background: #008ecc;
+  }
+  button:active {
+    background: #0077b3;
+  }
+
+  /* Kopyala & temizle bölümü */
+  .copy-clear {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .copy-clear button {
+    flex: unset;
+    padding: 10px 18px;
+    font-weight: 600;
+    background: #005577;
+    color: #cceeff;
+    border-radius: 10px;
+  }
+  .copy-clear button:hover {
+    background: #0088cc;
+  }
+
+  .download-btn {
+    background: #4CAF50 !important;
+  }
+  .download-btn:hover {
+    background: #3e8e41 !important;
+  }
+
+  .speak-btn {
+    background: #9c27b0 !important;
+  }
+  .speak-btn:hover {
+    background: #7b1fa2 !important;
+  }
+
+  /* Hata mesajları */
+  .error-msg {
+    color: #ff5555;
+    font-weight: 700;
+    margin-bottom: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .tabs {
+      flex-wrap: wrap;
+    }
+    .tab {
+      flex: 1 0 50%;
+      text-align: center;
+      padding: 10px 0;
+    }
+    textarea {
+      height: 120px;
+    }
+    .header-controls {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    #currentDate {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="currentDate"></div>
+  <div class="header-controls">
+    <button id="themeToggle">
+      <span id="themeIcon">🌙</span>
+      <span id="themeText">Koyu</span>
+    </button>
+    <select id="langSelector" aria-label="Dil seçimi">
+      <option value="tr" selected>Türkçe</option>
+      <option value="en">English</option>
+      <option value="jp">日本語</option>
+      <option value="cn">中文</option>
+      <option value="ru">Русский</option>
+    </select>
+  </div>
+</header>
+
+<main>
+  <h1 id="title">Türkçe Binary Çevirici</h1>
+
+  <div class="tabs" role="tablist" aria-label="Çevirici Türleri">
+    <button class="tab active" data-tab="binary" role="tab" aria-selected="true" aria-controls="binary-tab" id="binary-tab-btn">Binary</button>
+    <button class="tab" data-tab="ascii" role="tab" aria-selected="false" aria-controls="ascii-tab" id="ascii-tab-btn">ASCII</button>
+    <button class="tab" data-tab="hex" role="tab" aria-selected="false" aria-controls="hex-tab" id="hex-tab-btn">Hex</button>
+    <button class="tab" data-tab="base64" role="tab" aria-selected="false" aria-controls="base64-tab" id="base64-tab-btn">Base64</button>
+  </div>
+
+  <!-- Binary -->
+  <section id="binary-tab" class="tab-content active" role="tabpanel" aria-labelledby="binary-tab-btn">
+    <textarea id="binary-input" placeholder="Metin ya da binary kodunu buraya yaz..."></textarea>
+    <div class="error-msg" id="binary-error"></div>
+    <div class="buttons">
+      <button onclick="convert('binary', 'toBinary')">Metni Binary'ye Çevir</button>
+      <button onclick="convert('binary', 'toText')">Binary'yi Metne Çevir</button>
+    </div>
+    <textarea id="binary-output" readonly placeholder="Sonuç burada görünecek..."></textarea>
+    <div class="copy-clear">
+      <button onclick="copyOutput('binary-output')">Kopyala</button>
+      <button onclick="downloadText('binary-output', 'binary')">İndir</button>
+      <button onclick="speakText('binary-output')">Sesli Oku</button>
+      <button onclick="clearFields('binary')">Temizle</button>
+    </div>
+  </section>
+
+  <!-- ASCII -->
+  <section id="ascii-tab" class="tab-content" role="tabpanel" aria-labelledby="ascii-tab-btn">
+    <textarea id="ascii-input" placeholder="Metin ya da ASCII kodlarını buraya yaz..."></textarea>
+    <div class="error-msg" id="ascii-error"></div>
+    <div class="buttons">
+      <button onclick="convert('ascii', 'toAsciiCodes')">Metni ASCII Koda Çevir</button>
+      <button onclick="convert('ascii', 'toText')">ASCII Kodunu Metne Çevir</button>
+    </div>
+    <textarea id="ascii-output" readonly placeholder="Sonuç burada görünecek..."></textarea>
+    <div class="copy-clear">
+      <button onclick="copyOutput('ascii-output')">Kopyala</button>
+      <button onclick="downloadText('ascii-output', 'ascii')">İndir</button>
+      <button onclick="speakText('ascii-output')">Sesli Oku</button>
+      <button onclick="clearFields('ascii')">Temizle</button>
+    </div>
+  </section>
+
+  <!-- Hex -->
+  <section id="hex-tab" class="tab-content" role="tabpanel" aria-labelledby="hex-tab-btn">
+    <textarea id="hex-input" placeholder="Metin ya da Hex kodlarını buraya yaz..."></textarea>
+    <div class="error-msg" id="hex-error"></div>
+    <div class="buttons">
+      <button onclick="convert('hex', 'toHex')">Metni Hex'e Çevir</button>
+      <button onclick="convert('hex', 'toText')">Hex'i Metne Çevir</button>
+    </div>
+    <textarea id="hex-output" readonly placeholder="Sonuç burada görünecek..."></textarea>
+    <div class="copy-clear">
+      <button onclick="copyOutput('hex-output')">Kopyala</button>
+      <button onclick="downloadText('hex-output', 'hex')">İndir</button>
+      <button onclick="speakText('hex-output')">Sesli Oku</button>
+      <button onclick="clearFields('hex')">Temizle</button>
+    </div>
+  </section>
+
+  <!-- Base64 -->
+  <section id="base64-tab" class="tab-content" role="tabpanel" aria-labelledby="base64-tab-btn">
+    <textarea id="base64-input" placeholder="Metin ya da Base64 kodunu buraya yaz..."></textarea>
+    <div class="error-msg" id="base64-error"></div>
+    <div class="buttons">
+      <button onclick="convert('base64', 'toBase64')">Metni Base64'e Çevir</button>
+      <button onclick="convert('base64', 'toText')">Base64'ü Metne Çevir</button>
+    </div>
+    <textarea id="base64-output" readonly placeholder="Sonuç burada görünecek..."></textarea>
+    <div class="copy-clear">
+      <button onclick="copyOutput('base64-output')">Kopyala</button>
+      <button onclick="downloadText('base64-output', 'base64')">İndir</button>
+      <button onclick="speakText('base64-output')">Sesli Oku</button>
+      <button onclick="clearFields('base64')">Temizle</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Dil ve çeviri metinleri
+  const texts = {
+    tr: {
+      title: "Türkçe Binary Çevirici",
+      placeholders: {
+        binary: "Metin ya da binary kodunu buraya yaz...",
+        ascii: "Metin ya da ASCII kodlarını buraya yaz...",
+        hex: "Metin ya da Hex kodlarını buraya yaz...",
+        base64: "Metin ya da Base64 kodunu buraya yaz..."
+      },
+      errorEmpty: "Lütfen bir giriş girin!",
+      errorInvalidBinary: (i, val) => `Hata: ${i + 1}. binary grup '${val}' geçerli değil!`,
+      errorInvalidAscii: (val) => `Hata: '${val}' geçerli bir ASCII kodu değil!`,
+      errorInvalidHex: (val) => `Hata: '${val}' geçerli bir Hex kodu değil!`,
+      errorInvalidBase64: "Geçersiz Base64 kodu!",
+      buttons: {
+        toBinary: "Metni Binary'ye Çevir",
+        toTextFromBinary: "Binary'yi Metne Çevir",
+        toAsciiCodes: "Metni ASCII Koda Çevir",
+        toTextFromAscii: "ASCII Kodunu Metne Çevir",
+        toHex: "Metni Hex'e Çevir",
+        toTextFromHex: "Hex'i Metne Çevir",
+        toBase64: "Metni Base64'e Çevir",
+        toTextFromBase64: "Base64'ü Metne Çevir"
+      },
+      theme: {
+        dark: "Koyu",
+        light: "Açık"
+      },
+      actions: {
+        copy: "Kopyala",
+        download: "İndir",
+        speak: "Sesli Oku",
+        clear: "Temizle"
+      }
+    },
+    en: {
+      title: "English Binary Converter",
+      placeholders: {
+        binary: "Type text or binary code here...",
+        ascii: "Type text or ASCII codes here...",
+        hex: "Type text or Hex codes here...",
+        base64: "Type text or Base64 code here..."
+      },
+      errorEmpty: "Please enter input!",
+      errorInvalidBinary: (i, val) => `Error: group ${i + 1} '${val}' is not a valid 8-bit binary!`,
+      errorInvalidAscii: (val) => `Error: '${val}' is not a valid ASCII code!`,
+      errorInvalidHex: (val) => `Error: '${val}' is not a valid Hex code!`,
+      errorInvalidBase64: "Invalid Base64 code!",
+      buttons: {
+        toBinary: "Convert Text to Binary",
+        toTextFromBinary: "Convert Binary to Text",
+        toAsciiCodes: "Convert Text to ASCII Codes",
+        toTextFromAscii: "Convert ASCII Codes to Text",
+        toHex: "Convert Text to Hex",
+        toTextFromHex: "Convert Hex to Text",
+        toBase64: "Convert Text to Base64",
+        toTextFromBase64: "Convert Base64 to Text"
+      },
+      theme: {
+        dark: "Dark",
+        light: "Light"
+      },
+      actions: {
+        copy: "Copy",
+        download: "Download",
+        speak: "Speak",
+        clear: "Clear"
+      }
+    },
+    jp: {
+      title: "日本語 バイナリーコンバーター",
+      placeholders: {
+        binary: "テキストまたはバイナリーコードを入力してください...",
+        ascii: "テキストまたはASCIIコードを入力してください...",
+        hex: "テキストまたは16進数コードを入力してください...",
+        base64: "テキストまたはBase64コードを入力してください..."
+      },
+      errorEmpty: "入力してください！",
+      errorInvalidBinary: (i, val) => `エラー: ${i + 1}番目のバイナリーグループ '${val}' は有効な8ビットバイナリーではありません！`,
+      errorInvalidAscii: (val) => `エラー: '${val}' は有効なASCIIコードではありません！`,
+      errorInvalidHex: (val) => `エラー: '${val}' は有効な16進数コードではありません！`,
+      errorInvalidBase64: "無効なBase64コードです！",
+      buttons: {
+        toBinary: "テキストをバイナリーに変換",
+        toTextFromBinary: "バイナリーをテキストに変換",
+        toAsciiCodes: "テキストをASCIIコードに変換",
+        toTextFromAscii: "ASCIIコードをテキストに変換",
+        toHex: "テキストを16進数に変換",
+        toTextFromHex: "16進数をテキストに変換",
+        toBase64: "テキストをBase64に変換",
+        toTextFromBase64: "Base64をテキストに変換"
+      },
+      theme: {
+        dark: "ダーク",
+        light: "ライト"
+      },
+      actions: {
+        copy: "コピー",
+        download: "ダウンロード",
+        speak: "読み上げ",
+        clear: "クリア"
+      }
+    },
+    cn: {
+      title: "中文二进制转换器",
+      placeholders: {
+        binary: "请输入文本或二进制代码...",
+        ascii: "请输入文本或ASCII代码...",
+        hex: "请输入文本或十六进制代码...",
+        base64: "请输入文本或Base64代码..."
+      },
+      errorEmpty: "请输入内容！",
+      errorInvalidBinary: (i, val) => `错误：第${i + 1}组 '${val}' 不是有效的8位二进制！`,
+      errorInvalidAscii: (val) => `错误：'${val}' 不是有效的ASCII代码！`,
+      errorInvalidHex: (val) => `错误：'${val}' 不是有效的十六进制代码！`,
+      errorInvalidBase64: "无效的Base64代码！",
+      buttons: {
+        toBinary: "文本转二进制",
+        toTextFromBinary: "二进制转文本",
+        toAsciiCodes: "文本转ASCII码",
+        toTextFromAscii: "ASCII码转文本",
+        toHex: "文本转十六进制",
+        toTextFromHex: "十六进制转文本",
+        toBase64: "文本转Base64",
+        toTextFromBase64: "Base64转文本"
+      },
+      theme: {
+        dark: "深色",
+        light: "浅色"
+      },
+      actions: {
+        copy: "复制",
+        download: "下载",
+        speak: "朗读",
+        clear: "清除"
+      }
+    },
+    ru: {
+      title: "Русский бинарный конвертер",
+      placeholders: {
+        binary: "Введите текст или двоичный код здесь...",
+        ascii: "Введите текст или ASCII код здесь...",
+        hex: "Введите текст или шестнадцатеричный код здесь...",
+        base64: "Введите текст или Base64 код здесь..."
+      },
+      errorEmpty: "Пожалуйста, введите данные!",
+      errorInvalidBinary: (i, val) => `Ошибка: группа ${i + 1} '${val}' не является допустимым 8-битным двоичным числом!`,
+      errorInvalidAscii: (val) => `Ошибка: '${val}' не является допустимым ASCII кодом!`,
+      errorInvalidHex: (val) => `Ошибка: '${val}' не является допустимым шестнадцатеричным кодом!`,
+      errorInvalidBase64: "Недопустимый Base64 код!",
+      buttons: {
+        toBinary: "Преобразовать текст в двоичный код",
+        toTextFromBinary: "Преобразовать двоичный код в текст",
+        toAsciiCodes: "Преобразовать текст в ASCII код",
+        toTextFromAscii: "Преобразовать ASCII код в текст",
+        toHex: "Преобразовать текст в Hex",
+        toTextFromHex: "Преобразовать Hex в текст",
+        toBase64: "Преобразовать текст в Base64",
+        toTextFromBase64: "Преобразовать Base64 в текст"
+      },
+      theme: {
+        dark: "Темная",
+        light: "Светлая"
+      },
+      actions: {
+        copy: "Копировать",
+        download: "Скачать",
+        speak: "Озвучить",
+        clear: "Очистить"
+      }
+    }
+  };
+
+  // Aktif dil & sekme
+  let currentLang = localStorage.getItem('language') || 'tr';
+  let currentTab = localStorage.getItem('currentTab') || 'binary';
+  let isDarkMode = localStorage.getItem('darkMode') === 'true' || true;
+
+  // Tarih gösterimi
+  function updateDate() {
+    const now = new Date();
+    const options = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    document.getElementById('currentDate').textContent = now.toLocaleDateString(currentLang === 'tr' ? 'tr-TR' : currentLang, options);
+  }
+
+  // Tema değiştirme
+  function toggleTheme() {
+    isDarkMode = !isDarkMode;
+    localStorage.setItem('darkMode', isDarkMode);
+    applyTheme();
+  }
+
+  function applyTheme() {
+    if (isDarkMode) {
+      document.body.classList.remove('light-mode');
+      document.getElementById('themeIcon').textContent = '🌙';
+      document.getElementById('themeText').textContent = texts[currentLang].theme.dark;
+    } else {
+      document.body.classList.add('light-mode');
+      document.getElementById('themeIcon').textContent = '☀️';
+      document.getElementById('themeText').textContent = texts[currentLang].theme.light;
+    }
+  }
+
+  // Dil değiştirince UI güncelle
+  document.getElementById('langSelector').value = currentLang;
+  document.getElementById('langSelector').addEventListener('change', e => {
+    currentLang = e.target.value;
+    localStorage.setItem('language', currentLang);
+    updateUI();
+    updateDate();
+    clearAllFields();
+  });
+
+  // Tema butonu
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+  // Sekme seçimi
+  function setActiveTab(tab) {
+    if (tab === currentTab) return;
+    
+    // Sekmeyi değiştir
+    currentTab = tab;
+    localStorage.setItem('currentTab', currentTab);
+
+    // Sekmelerde aktiflik
+    document.querySelectorAll('.tab').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    document.querySelector(`.tab[data-tab="${currentTab}"]`).classList.add('active');
+    document.querySelector(`.tab[data-tab="${currentTab}"]`).setAttribute('aria-selected', 'true');
+
+    // İçerikleri değiştir
+    document.querySelectorAll('.tab-content').forEach(tc => {
+      tc.classList.remove('active');
+    });
+    document.getElementById(`${currentTab}-tab`).classList.add('active');
+
+    updateUI();
+  }
+
+  document.querySelectorAll('.tab').forEach(tabBtn => {
+    tabBtn.addEventListener('click', () => setActiveTab(tabBtn.dataset.tab));
+  });
+
+  // Sayfa yüklendiğinde aktif sekmeyi ayarla
+  setActiveTab(currentTab);
+
+  function updateUI() {
+    // Başlık
+    document.title = texts[currentLang].title;
+    document.querySelector('h1').textContent = texts[currentLang].title;
+
+    // Placeholder'lar
+    ['binary', 'ascii', 'hex', 'base64'].forEach(type => {
+      document.getElementById(`${type}-input`).placeholder = texts[currentLang].placeholders[type];
+      document.getElementById(`${type}-output`).placeholder = texts[currentLang].placeholders[type];
+    });
+
+    // Butonlar
+    const btns = {
+      binary: ['toBinary', 'toTextFromBinary'],
+      ascii: ['toAsciiCodes', 'toTextFromAscii'],
+      hex: ['toHex', 'toTextFromHex'],
+      base64: ['toBase64', 'toTextFromBase64']
+    };
+    for (const [type, actions] of Object.entries(btns)) {
+      document.querySelectorAll(`#${type}-tab .buttons button`).forEach((btn, i) => {
+        btn.textContent = texts[currentLang].buttons[actions[i]];
+      });
+    }
+
+    // Aksiyon butonları
+    document.querySelectorAll('.copy-clear button:nth-child(1)').forEach(btn => {
+      btn.textContent = texts[currentLang].actions.copy;
+    });
+    document.querySelectorAll('.copy-clear button:nth-child(2)').forEach(btn => {
+      btn.textContent = texts[currentLang].actions.download;
+    });
+    document.querySelectorAll('.copy-clear button:nth-child(3)').forEach(btn => {
+      btn.textContent = texts[currentLang].actions.speak;
+    });
+    document.querySelectorAll('.copy-clear button:nth-child(4)').forEach(btn => {
+      btn.textContent = texts[currentLang].actions.clear;
+    });
+
+    // Tema butonu
+    document.getElementById('themeText').textContent = 
+      isDarkMode ? texts[currentLang].theme.dark : texts[currentLang].theme.light;
+  }
+
+  // Temizleme fonksiyonu
+  function clearFields(type) {
+    document.getElementById(`${type}-input`).value = '';
+    document.getElementById(`${type}-output`).value = '';
+    document.getElementById(`${type}-error`).textContent = '';
+    saveToLocalStorage(type);
+  }
+
+  function clearAllFields() {
+    ['binary', 'ascii', 'hex', 'base64'].forEach(clearFields);
+  }
+
+  // Kopyala fonksiyonu
+  function copyOutput(id) {
+    const output = document.getElementById(id);
+    if (!output.value) return alert(texts[currentLang].errorEmpty);
+    output.select();
+    navigator.clipboard.writeText(output.value).then(() => {
+      alert('Kopyalandı!');
+    });
+  }
+
+  // İndirme fonksiyonu
+  function downloadText(id, type) {
+    const output = document.getElementById(id);
+    if (!output.value) return alert(texts[currentLang].errorEmpty);
+    
+    const blob = new Blob([output.value], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}_converted_${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Sesli okuma fonksiyonu
+  function speakText(id) {
+    const output = document.getElementById(id);
+    if (!output.value) return alert(texts[currentLang].errorEmpty);
+    
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(output.value);
+      utterance.lang = currentLang === 'tr' ? 'tr-TR' : currentLang;
+      speechSynthesis.speak(utterance);
+    } else {
+      alert('Tarayıcınız metin okuma özelliğini desteklemiyor!');
+    }
+  }
+
+  // LocalStorage'e kaydet
+  function saveToLocalStorage(type) {
+    const input = document.getElementById(`${type}-input`).value;
+    const output = document.getElementById(`${type}-output`).value;
+    
+    localStorage.setItem(`${type}-input`, input);
+    localStorage.setItem(`${type}-output`, output);
+  }
+
+  // LocalStorage'den yükle
+  function loadFromLocalStorage() {
+    ['binary', 'ascii', 'hex', 'base64'].forEach(type => {
+      const savedInput = localStorage.getItem(`${type}-input`);
+      const savedOutput = localStorage.getItem(`${type}-output`);
+      
+      if (savedInput) document.getElementById(`${type}-input`).value = savedInput;
+      if (savedOutput) document.getElementById(`${type}-output`).value = savedOutput;
+    });
+  }
+
+  // Dönüştürme fonksiyonları
+
+  // Binary -> Text
+  function binaryToText(binaryStr) {
+    const groups = binaryStr.trim().split(/\s+/);
+    let text = '';
+    for (let i = 0; i < groups.length; i++) {
+      const b = groups[i];
+      if (!/^[01]{8}$/.test(b)) {
+        throw {type: 'binary', index: i, value: b};
+      }
+      text += String.fromCharCode(parseInt(b, 2));
+    }
+    return text;
+  }
+
+  // Text -> Binary
+  function textToBinary(text) {
+    return Array.from(text).map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+  }
+
+  // ASCII Kodları -> Text
+  function asciiToText(asciiStr) {
+    const codes = asciiStr.trim().split(/\s+/);
+    let text = '';
+    for (const code of codes) {
+      if (!/^\d+$/.test(code) || parseInt(code) > 255) {
+        throw {type: 'ascii', value: code};
+      }
+      text += String.fromCharCode(parseInt(code));
+    }
+    return text;
+  }
+
+  // Text -> ASCII Kodları
+  function textToAscii(text) {
+    return Array.from(text).map(c => c.charCodeAt(0)).join(' ');
+  }
+
+  // Hex -> Text
+  function hexToText(hexStr) {
+    const clean = hexStr.replace(/[^0-9a-fA-F]/g, '');
+    if (clean.length % 2 !== 0) throw {type: 'hex', value: hexStr};
+    let text = '';
+    for (let i = 0; i < clean.length; i += 2) {
+      const byte = clean.substring(i, i + 2);
+      if (!/^[0-9a-fA-F]{2}$/.test(byte)) throw {type: 'hex', value: byte};
+      text += String.fromCharCode(parseInt(byte, 16));
+    }
+    return text;
+  }
+
+  // Text -> Hex
+  function textToHex(text) {
+    return Array.from(text).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+  }
+
+  // Base64 -> Text
+  function base64ToText(base64Str) {
+    try {
+      return atob(base64Str);
+    } catch {
+      throw {type: 'base64'};
+    }
+  }
+
+  // Text -> Base64
+  function textToBase64(text) {
+    return btoa(text);
+  }
+
+  // Genel convert fonksiyonu
+  function convert(type, action) {
+    const input = document.getElementById(`${type}-input`).value.trim();
+    const errorEl = document.getElementById(`${type}-error`);
+    const outputEl = document.getElementById(`${type}-output`);
+    errorEl.textContent = '';
+    outputEl.value = '';
+    if (!input) {
+      errorEl.textContent = texts[currentLang].errorEmpty;
+      return;
+    }
+    try {
+      let result;
+      switch(type) {
+        case 'binary':
+          if (action === 'toText') result = binaryToText(input);
+          else result = textToBinary(input);
+          break;
+        case 'ascii':
+          if (action === 'toText') result = asciiToText(input);
+          else result = textToAscii(input);
+          break;
+        case 'hex':
+          if (action === 'toText') result = hexToText(input);
+          else result = textToHex(input);
+          break;
+        case 'base64':
+          if (action === 'toText') result = base64ToText(input);
+          else result = textToBase64(input);
+          break;
+      }
+      outputEl.value = result;
+      saveToLocalStorage(type);
+    } catch(err) {
+      switch(err.type) {
+        case 'binary':
+          errorEl.textContent = texts[currentLang].errorInvalidBinary(err.index, err.value);
+          break;
+        case 'ascii':
+          errorEl.textContent = texts[currentLang].errorInvalidAscii(err.value);
+          break;
+        case 'hex':
+          errorEl.textContent = texts[currentLang].errorInvalidHex(err.value);
+          break;
+        case 'base64':
+          errorEl.textContent = texts[currentLang].errorInvalidBase64;
+          break;
+        default:
+          errorEl.textContent = 'Bilinmeyen hata!';
+      }
+    }
+  }
+
+  // Sayfa yüklendiğinde UI'yı ayarla
+  applyTheme();
+  updateUI();
+  loadFromLocalStorage();
+  updateDate();
+  setInterval(updateDate, 60000); // Dakikada bir tarihi güncelle
+
+  // Input değişikliklerini localStorage'e kaydet
+  document.querySelectorAll('textarea').forEach(textarea => {
+    textarea.addEventListener('input', function() {
+      const type = this.id.split('-')[0];
+      saveToLocalStorage(type);
+    });
+  });
+</script>
+
+</body>
+</html>
